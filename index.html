@@ -6,7 +6,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https: wss:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'">
 <script id="tf-key-engine">
 /* ==========================================================================
-   Trigger Forge - Universal Global Key Validation & Multi-Device Staff Engine
+   Trigger Forge - Universal Global Key Validation & Complete Staff Invite Engine
    ========================================================================== */
 (function(){
   "use strict";
@@ -106,6 +106,14 @@
     return result;
   }
 
+  // Base64 Helpers
+  function toB64(str) {
+    try { return btoa(encodeURIComponent(str)); } catch(e) { return ''; }
+  }
+  function fromB64(str) {
+    try { return decodeURIComponent(atob(str)); } catch(e) { return ''; }
+  }
+
   // 4. DEVICE FINGERPRINT (Stable 1-Device HWID)
   function getDeviceId() {
     var id = null;
@@ -166,7 +174,47 @@
     } catch(e){}
   }
 
-  // 6. ALGORITHMIC MATHEMATICAL KEY GENERATION & VERIFICATION
+  // 6. STAFF TOKEN GENERATION & VERIFICATION ENGINE (GLOBAL MULTI-DEVICE AUTH)
+  function createStaffToken(username, password, role) {
+    var u = (username || '').trim().toUpperCase();
+    var p = (password || '').trim();
+    var r = (role || 'Admin').trim();
+    var raw = u + '__' + p + '__' + r;
+    var sig = sha256(raw + MASTER_SALT).slice(0, 6).toUpperCase();
+    var b64 = toB64(u + ':' + p + ':' + r).replace(/=/g, '');
+    return 'TF-STAFF-' + b64 + '-' + sig;
+  }
+
+  function verifyStaffToken(tokenStr) {
+    if (!tokenStr || typeof tokenStr !== 'string') return { valid: false };
+    var clean = tokenStr.trim();
+    if (!clean.startsWith('TF-STAFF-')) return { valid: false };
+
+    var parts = clean.split('-');
+    if (parts.length < 4) return { valid: false };
+
+    var sig = parts.pop();
+    var b64 = parts.slice(2).join('-');
+    var decoded = fromB64(b64);
+    if (!decoded) return { valid: false };
+
+    var segs = decoded.split(':');
+    if (segs.length < 3) return { valid: false };
+
+    var u = segs[0];
+    var p = segs[1];
+    var r = segs[2];
+
+    var raw = u + '__' + p + '__' + r;
+    var expectedSig = sha256(raw + MASTER_SALT).slice(0, 6).toUpperCase();
+
+    if (sig === expectedSig) {
+      return { valid: true, user: { username: u, role: r, password: p } };
+    }
+    return { valid: false };
+  }
+
+  // 7. ALGORITHMIC MATHEMATICAL KEY GENERATION & VERIFICATION
   function generateAlgorithmicKey(prefix, duration, note) {
     prefix = (prefix || 'TF').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
     if (!prefix) prefix = 'TF';
@@ -233,7 +281,7 @@
     return sig === expectedSig;
   }
 
-  // 7. KEY VALIDATION & 1-DEVICE BINDING ENGINE (GLOBAL RESILIENCE)
+  // 8. KEY VALIDATION & 1-DEVICE BINDING ENGINE (GLOBAL RESILIENCE)
   function checkKeyStatus(inputKey) {
     if (!inputKey || typeof inputKey !== 'string') {
       return { valid: false, reason: 'يرجى إدخال مفتاح التفعيل (Enter Key)' };
@@ -349,7 +397,7 @@
     window.dispatchEvent(new CustomEvent('tf:unlocked', { detail: { key: key, deviceId: CURRENT_DEV_ID } }));
   }
 
-  // 8. LOGS & TOASTS
+  // 9. LOGS & TOASTS
   function logAction(action, target) {
     target = target || 'System';
     var logs = getLocalList(STORAGE_KEYS.LOGS, []);
@@ -383,7 +431,7 @@
     }, 2800);
   }
 
-  // 9. ADMIN DASHBOARD & UNIVERSAL MULTI-DEVICE STAFF AUTH
+  // 10. ADMIN DASHBOARD & UNIVERSAL MULTI-DEVICE STAFF AUTH
   var currentAdminUser = null;
 
   function openAdmin() {
@@ -434,7 +482,7 @@
     var MASTER_ADMIN_KEYS = ['TF-ADMIN-2026-PRO', 'TF-SCARFACE-2026', 'TF-VIP-LIFETIME', 'TF-9B4E-351B-6E'];
     var isMasterKeyPass = MASTER_ADMIN_KEYS.some(function(k){ return k.toUpperCase() === p.toUpperCase() || k.toUpperCase() === u.toUpperCase(); });
 
-    // 1. Direct Local Match in Staff DB
+    // 1. Direct Match in Local Database
     var match = staffList.find(function(s){
       return s.username.toLowerCase() === u.toLowerCase() && (s.passwordHash === inputHash || s.password === p);
     });
@@ -442,21 +490,32 @@
     // 2. Master Owner Login (salom / M99178296m)
     var isMasterOwner = (u.toLowerCase() === 'salom' && (inputHash === SALOM_PASS_HASH || p === 'M99178296m'));
 
-    // 3. Universal Staff Login for Any Device (if password is M99178296m or any Master Admin Key)
+    // 3. Staff Token Login Verification (TF-STAFF-...)
+    var tokenCheck = verifyStaffToken(p);
+    if (!tokenCheck.valid && u.startsWith('TF-STAFF-')) tokenCheck = verifyStaffToken(u);
+
+    // 4. Universal Staff Login for Any Device (if password is M99178296m or any Master Admin Key)
     var isMasterAdminPass = (p === 'M99178296m' || inputHash === SALOM_PASS_HASH || isMasterKeyPass);
 
-    if (match || isMasterOwner || (isMasterAdminPass && (u || p))) {
+    if (match || isMasterOwner || tokenCheck.valid || (isMasterAdminPass && (u || p))) {
       if (adminErr) { adminErr.hidden = true; adminErr.style.display = 'none'; }
       
-      var loggedUsername = u || (isMasterKeyPass ? 'Staff' : 'salom');
-      var loggedRole = (loggedUsername.toLowerCase() === 'salom') ? 'Owner' : (match ? match.role : 'Admin');
+      var loggedUsername = tokenCheck.valid ? tokenCheck.user.username : (u || (isMasterKeyPass ? 'Staff' : 'salom'));
+      var loggedRole = (loggedUsername.toLowerCase() === 'salom') ? 'Owner' : (tokenCheck.valid ? tokenCheck.user.role : (match ? match.role : 'Admin'));
       
       var loggedUser = { username: loggedUsername, role: loggedRole };
       currentAdminUser = loggedUser;
       
       // Auto register this staff in local storage if not already there
       if (!staffList.some(function(s){ return s.username.toLowerCase() === loggedUsername.toLowerCase(); })) {
-        staffList.push({ username: loggedUsername, role: loggedRole, passwordHash: inputHash, createdAt: new Date().toISOString() });
+        staffList.push({
+          username: loggedUsername,
+          role: loggedRole,
+          passwordHash: inputHash,
+          password: p,
+          token: tokenCheck.valid ? (p.startsWith('TF-STAFF-') ? p : u) : createStaffToken(loggedUsername, p, loggedRole),
+          createdAt: new Date().toISOString()
+        });
         setLocalList(STORAGE_KEYS.STAFF, staffList);
       }
 
@@ -563,7 +622,7 @@
     var staff = getLocalList(STORAGE_KEYS.STAFF, DEFAULT_STAFF_LIST);
 
     if (staff.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:24px;">No staff members.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px;">No staff members.</td></tr>';
       return;
     }
 
@@ -579,15 +638,22 @@
 
       var createdDate = s.createdAt ? new Date(s.createdAt).toLocaleDateString() : '—';
       var isSelf = currentAdminUser && currentAdminUser.username.toLowerCase() === s.username.toLowerCase();
+      var token = s.token || createStaffToken(s.username, s.password || 'M99178296m', s.role);
+      var inviteLink = window.location.origin + window.location.pathname + '?staff=' + token;
 
       html += '<tr>' +
         '<td><b>' + s.username + '</b> ' + (isSelf ? '<span style="font-size:10px;color:var(--blue);">(You)</span>' : '') + '</td>' +
         '<td>' + roleBadge + '</td>' +
+        '<td style="font-family:var(--mono);font-size:11px;color:var(--yellow);">' + (s.password ? '🔑 ' + s.password : '••••••') + '</td>' +
         '<td style="color:var(--muted);font-size:11px;">' + createdDate + '</td>' +
         '<td style="text-align:right;">' +
           (s.username.toLowerCase() === 'salom' 
             ? '<span style="font-size:10px;color:var(--muted-2);">Primary Master (مالك)</span>'
-            : '<button class="admin-abtn pk" style="padding:4px 8px;font-size:11px;" data-delete-staff-idx="' + idx + '">Remove</button>') +
+            : '<div style="display:inline-flex;gap:4px;">' +
+                '<button class="admin-abtn gr" style="padding:4px 8px;font-size:10.5px;" title="نسخ رابط دعوة الإدارة" data-copy-invite="' + inviteLink + '">🔗 رابط الدعوة</button>' +
+                '<button class="admin-abtn" style="padding:4px 8px;font-size:10.5px;" title="نسخ توكن الإدارة" data-copy-token="' + token + '">📋 التوكن</button>' +
+                '<button class="admin-abtn pk" style="padding:4px 8px;font-size:11px;" data-delete-staff-idx="' + idx + '">✕</button>' +
+              '</div>') +
         '</td>' +
       '</tr>';
     });
@@ -641,8 +707,33 @@
     tbody.innerHTML = html;
   }
 
-  // 10. EVENT LISTENERS & DELEGATION
+  // 11. EVENT LISTENERS & URL AUTO-INVITE
   document.addEventListener('DOMContentLoaded', function() {
+    // Check URL Invite Parameter: ?staff=TF-STAFF-...
+    try {
+      var urlParams = new URLSearchParams(window.location.search);
+      var staffInvite = urlParams.get('staff');
+      if (staffInvite) {
+        var verify = verifyStaffToken(staffInvite);
+        if (verify.valid) {
+          currentAdminUser = verify.user;
+          var staffList = getLocalList(STORAGE_KEYS.STAFF, DEFAULT_STAFF_LIST);
+          if (!staffList.some(function(s){ return s.username.toLowerCase() === verify.user.username.toLowerCase(); })) {
+            staffList.push({
+              username: verify.user.username,
+              role: verify.user.role,
+              password: verify.user.password,
+              token: staffInvite,
+              createdAt: new Date().toISOString()
+            });
+            setLocalList(STORAGE_KEYS.STAFF, staffList);
+          }
+          openAdmin();
+          showToast('تم تفعيل صلاحيات الإدارة بنجاح: ' + verify.user.username + ' (' + verify.user.role + ')');
+        }
+      }
+    } catch(e){}
+
     var keyGateForm = document.getElementById('keyGateForm');
     var accessKeyInput = document.getElementById('accessKeyInput');
     var verifyKeyBtn = document.getElementById('verifyKeyBtn');
@@ -793,11 +884,13 @@
           return;
         }
 
+        var token = createStaffToken(u, p, r);
         var newStaff = {
           username: u,
           passwordHash: sha256(p + "__TF_SALT__2026"),
           password: p,
           role: r,
+          token: token,
           createdAt: new Date().toISOString()
         };
 
@@ -806,7 +899,7 @@
 
         logAction('Hired new staff member: ' + u + ' (' + r + ')', currentAdminUser ? currentAdminUser.username : 'salom');
         renderStaff();
-        showToast('Staff added: ' + u + ' (' + r + ')');
+        showToast('تمت إضافة الإداري بنجاح: ' + u);
 
         if (uInp) uInp.value = '';
         if (pInp) pInp.value = '';
@@ -852,19 +945,29 @@
       var target = e.target;
       if (!target) return;
 
+      var copyInvite = target.getAttribute('data-copy-invite');
+      if (copyInvite) {
+        e.preventDefault();
+        if (window.TF_COPY_CLIPBOARD) {
+          window.TF_COPY_CLIPBOARD(copyInvite, 'تم نسخ رابط دعوة الإدارة');
+        }
+        return;
+      }
+
+      var copyToken = target.getAttribute('data-copy-token');
+      if (copyToken) {
+        e.preventDefault();
+        if (window.TF_COPY_CLIPBOARD) {
+          window.TF_COPY_CLIPBOARD(copyToken, 'تم نسخ توكن الإدارة');
+        }
+        return;
+      }
+
       var copyKey = target.getAttribute('data-copy-key');
       if (copyKey) {
         e.preventDefault();
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(copyKey).then(function() { showToast('Copied: ' + copyKey); });
-        } else {
-          var inp = document.createElement('input');
-          inp.value = copyKey;
-          document.body.appendChild(inp);
-          inp.select();
-          document.execCommand('copy');
-          document.body.removeChild(inp);
-          showToast('Copied: ' + copyKey);
+        if (window.TF_COPY_CLIPBOARD) {
+          window.TF_COPY_CLIPBOARD(copyKey, 'تم نسخ المفتاح: ' + copyKey);
         }
         return;
       }
@@ -981,11 +1084,8 @@
   // Global Manager Object
   window.TF_KEY_MANAGER = {
     getHwid: function() { return CURRENT_DEV_ID; },
-    copyKey: function(key) {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(key).then(function() { showToast('Copied: ' + key); });
-      }
-    },
+    createStaffToken: createStaffToken,
+    verifyStaffToken: verifyStaffToken,
     generateKey: function(pfx, dur, note) { return generateAlgorithmicKey(pfx, dur, note); },
     openAdmin: openAdmin,
     closeAdmin: closeAdmin,
@@ -2014,7 +2114,7 @@ button{cursor:pointer}
       <button class="admin-abtn gr" id="addAdminBtn">+ توظيف إداري (Add Staff)</button>
      </div>
      <table class="admin-tbl">
-      <thead><tr><th>اسم المستخدم</th><th>الرتبة (Role)</th><th>تاريخ الإضافة</th><th class="text-right">الإجراءات</th></tr></thead>
+      <thead><tr><th>اسم المستخدم</th><th>الرتبة (Role)</th><th>كلمة المرور</th><th>تاريخ الإضافة</th><th class="text-right">مشاركة الإدارة (Share)</th></tr></thead>
       <tbody id="adminsBody"></tbody>
      </table>
     </div>
