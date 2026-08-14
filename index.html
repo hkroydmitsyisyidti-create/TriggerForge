@@ -6,7 +6,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https: wss:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'">
 <script id="tf-key-engine">
 /* ==========================================================================
-   Trigger Forge - Universal Global Key Validation & Complete Staff Invite Engine
+   Trigger Forge - Universal Global Key Validation, Cloud Sync & 1-Device Lock
    ========================================================================== */
 (function(){
   "use strict";
@@ -106,7 +106,6 @@
     return result;
   }
 
-  // Base64 Helpers
   function toB64(str) {
     try { return btoa(encodeURIComponent(str)); } catch(e) { return ''; }
   }
@@ -138,12 +137,12 @@
   var CURRENT_DEV_ID = getDeviceId();
   var SALOM_PASS_HASH = sha256("M99178296m__TF_SALT__2026");
 
-  // 5. MASTER KEYS & DEFAULT VAULT
+  // 5. MASTER KEYS & LOCAL STORAGE VAULT
   var MASTER_KEYS_LIST = [
-    { key: 'TF-SCARFACE-2026', duration: 'lifetime', note: 'Primary Master Key', status: 'active' },
-    { key: 'TF-9B4E-351B-6E', duration: 'lifetime', note: 'Hardware Master Key', status: 'active' },
-    { key: 'TF-ADMIN-2026-PRO', duration: 'lifetime', note: 'Admin VIP License', status: 'active' },
-    { key: 'TF-VIP-LIFETIME', duration: 'lifetime', note: 'Unlimited Lifetime Access', status: 'active' }
+    { key: 'TF-SCARFACE-2026', duration: 'lifetime', note: 'Primary Master Key', status: 'active', boundDevice: null },
+    { key: 'TF-9B4E-351B-6E', duration: 'lifetime', note: 'Hardware Master Key', status: 'active', boundDevice: null },
+    { key: 'TF-ADMIN-2026-PRO', duration: 'lifetime', note: 'Admin VIP License', status: 'active', boundDevice: null },
+    { key: 'TF-VIP-LIFETIME', duration: 'lifetime', note: 'Unlimited Lifetime Access', status: 'active', boundDevice: null }
   ];
 
   var DEFAULT_STAFF_LIST = [
@@ -174,7 +173,83 @@
     } catch(e){}
   }
 
-  // 6. STAFF TOKEN GENERATION & VERIFICATION ENGINE (GLOBAL MULTI-DEVICE AUTH)
+  // 6. REAL-TIME CLOUD VAULT SYNC (GLOBAL 1-DEVICE LOCK & MULTI-USER SYNC)
+  var CLOUD_VAULT_ID = "ff8081819ff5b110019ffe6ed9a916a4";
+  var CLOUD_VAULT_URL = "https://api.restful-api.dev/objects/" + CLOUD_VAULT_ID;
+
+  function fetchCloudVault(cb) {
+    try {
+      fetch(CLOUD_VAULT_URL + '?t=' + Date.now(), { cache: 'no-store' })
+        .then(function(res) { return res.json(); })
+        .then(function(json) {
+          if (json && json.data) {
+            var cloudKeys = json.data.keys || [];
+            var cloudStaff = json.data.staff || [];
+            
+            // Merge cloud keys into local storage
+            var localKeys = getLocalList(STORAGE_KEYS.KEYS, []);
+            var mergedMap = {};
+            
+            localKeys.forEach(function(k){ mergedMap[k.key.toUpperCase()] = k; });
+            cloudKeys.forEach(function(k){
+              var cleanKey = k.key.toUpperCase();
+              if (!mergedMap[cleanKey] || k.boundDevice) {
+                mergedMap[cleanKey] = Object.assign({}, mergedMap[cleanKey] || {}, k);
+              }
+            });
+
+            var mergedKeys = Object.values(mergedMap);
+            setLocalList(STORAGE_KEYS.KEYS, mergedKeys);
+
+            if (cloudStaff.length > 0) {
+              setLocalList(STORAGE_KEYS.STAFF, cloudStaff);
+            }
+
+            if (cb) cb(null, json.data);
+          } else {
+            if (cb) cb(new Error('Invalid cloud response'));
+          }
+        })
+        .catch(function(err) {
+          if (cb) cb(err);
+        });
+    } catch(e) {
+      if (cb) cb(e);
+    }
+  }
+
+  function pushCloudVault(cb) {
+    try {
+      var keys = getLocalList(STORAGE_KEYS.KEYS, []);
+      var staff = getLocalList(STORAGE_KEYS.STAFF, DEFAULT_STAFF_LIST);
+
+      var payload = {
+        name: "TF_KEYS_VAULT",
+        data: {
+          keys: keys,
+          staff: staff,
+          updatedAt: new Date().toISOString()
+        }
+      };
+
+      fetch(CLOUD_VAULT_URL, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      .then(function(res) { return res.json(); })
+      .then(function(json) {
+        if (cb) cb(null, json);
+      })
+      .catch(function(err) {
+        if (cb) cb(err);
+      });
+    } catch(e) {
+      if (cb) cb(e);
+    }
+  }
+
+  // 7. STAFF TOKEN ENGINE
   function createStaffToken(username, password, role) {
     var u = (username || '').trim().toUpperCase();
     var p = (password || '').trim();
@@ -214,7 +289,7 @@
     return { valid: false };
   }
 
-  // 7. ALGORITHMIC MATHEMATICAL KEY GENERATION & VERIFICATION
+  // 8. ALGORITHMIC MATHEMATICAL KEY GENERATION & VERIFICATION
   function generateAlgorithmicKey(prefix, duration, note) {
     prefix = (prefix || 'TF').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
     if (!prefix) prefix = 'TF';
@@ -251,6 +326,7 @@
       expiresAt: durMs ? new Date(now + durMs).toISOString() : null,
       status: 'active',
       boundDevice: null,
+      boundAt: null,
       createdBy: currentAdminUser ? currentAdminUser.username : 'salom'
     };
 
@@ -258,9 +334,14 @@
     keys.unshift(keyObj);
     setLocalList(STORAGE_KEYS.KEYS, keys);
 
+    // Push to Cloud Vault in real time
+    pushCloudVault(function() {
+      renderKeys();
+    });
+
     logAction('Generated key ' + fullKey + ' (' + duration + ') for "' + note + '"', keyObj.createdBy);
     renderKeys();
-    showToast('Key Generated: ' + fullKey);
+    showToast('Key Generated & Synced: ' + fullKey);
     return keyObj;
   }
 
@@ -281,7 +362,7 @@
     return sig === expectedSig;
   }
 
-  // 8. KEY VALIDATION & 1-DEVICE BINDING ENGINE (GLOBAL RESILIENCE)
+  // 9. KEY VALIDATION & REAL-TIME 1-DEVICE HWID BINDING ENGINE
   function checkKeyStatus(inputKey) {
     if (!inputKey || typeof inputKey !== 'string') {
       return { valid: false, reason: 'يرجى إدخال مفتاح التفعيل (Enter Key)' };
@@ -323,7 +404,7 @@
       }
     }
 
-    // E. Algorithmic Signature Verification (Allows newly generated keys to work on ANY computer!)
+    // E. Algorithmic Signature Verification
     if (!found) {
       if (verifyAlgorithmicKey(clean)) {
         found = {
@@ -333,14 +414,11 @@
           createdAt: new Date().toISOString(),
           expiresAt: null,
           status: 'active',
-          boundDevice: CURRENT_DEV_ID,
-          boundAt: new Date().toISOString(),
+          boundDevice: null,
           createdBy: 'Admin Verified'
         };
         keys.unshift(found);
         setLocalList(STORAGE_KEYS.KEYS, keys);
-        logAction('Algorithmic key ' + clean + ' verified & bound to device ' + CURRENT_DEV_ID, 'Device Binding');
-        return { valid: true, keyData: found };
       }
     }
 
@@ -353,15 +431,20 @@
         setLocalList(STORAGE_KEYS.KEYS, keys);
         return { valid: false, reason: '⏱ انتهت صلاحية هذا المفتاح' };
       }
-      if (found.boundDevice && found.boundDevice !== CURRENT_DEV_ID) {
+
+      // 1-Device Binding Check
+      if (found.boundDevice && found.boundDevice.toUpperCase() !== CURRENT_DEV_ID.toUpperCase()) {
         return { valid: false, reason: '🔒 هذا المفتاح مستخدم ومربوط بجهاز آخر! (مسموح جهاز واحد فقط)' };
       }
+
       if (!found.boundDevice) {
         found.boundDevice = CURRENT_DEV_ID;
         found.boundAt = new Date().toISOString();
         setLocalList(STORAGE_KEYS.KEYS, keys);
+        pushCloudVault(); // Sync 1-device lock to Cloud Vault
         logAction('Key ' + found.key + ' bound to device ' + CURRENT_DEV_ID, 'Device Binding');
       }
+
       return { valid: true, keyData: found };
     }
 
@@ -397,7 +480,7 @@
     window.dispatchEvent(new CustomEvent('tf:unlocked', { detail: { key: key, deviceId: CURRENT_DEV_ID } }));
   }
 
-  // 9. LOGS & TOASTS
+  // 10. LOGS & TOASTS
   function logAction(action, target) {
     target = target || 'System';
     var logs = getLocalList(STORAGE_KEYS.LOGS, []);
@@ -431,7 +514,7 @@
     }, 2800);
   }
 
-  // 10. ADMIN DASHBOARD & UNIVERSAL MULTI-DEVICE STAFF AUTH
+  // 11. ADMIN DASHBOARD & UNIVERSAL MULTI-DEVICE STAFF AUTH
   var currentAdminUser = null;
 
   function openAdmin() {
@@ -443,6 +526,11 @@
     overlay.removeAttribute('hidden');
     overlay.style.display = 'flex';
     overlay.style.opacity = '1';
+
+    // Auto-refresh from cloud on open
+    fetchCloudVault(function() {
+      renderAdminAll();
+    });
 
     if (currentAdminUser && currentAdminUser.username) {
       if (loginCard) { loginCard.hidden = true; loginCard.style.display = 'none'; }
@@ -482,7 +570,7 @@
     var MASTER_ADMIN_KEYS = ['TF-ADMIN-2026-PRO', 'TF-SCARFACE-2026', 'TF-VIP-LIFETIME', 'TF-9B4E-351B-6E'];
     var isMasterKeyPass = MASTER_ADMIN_KEYS.some(function(k){ return k.toUpperCase() === p.toUpperCase() || k.toUpperCase() === u.toUpperCase(); });
 
-    // 1. Direct Match in Local Database
+    // 1. Direct Match in Local / Cloud Database
     var match = staffList.find(function(s){
       return s.username.toLowerCase() === u.toLowerCase() && (s.passwordHash === inputHash || s.password === p);
     });
@@ -494,7 +582,7 @@
     var tokenCheck = verifyStaffToken(p);
     if (!tokenCheck.valid && u.startsWith('TF-STAFF-')) tokenCheck = verifyStaffToken(u);
 
-    // 4. Universal Staff Login for Any Device (if password is M99178296m or any Master Admin Key)
+    // 4. Universal Staff Login for Any Device
     var isMasterAdminPass = (p === 'M99178296m' || inputHash === SALOM_PASS_HASH || isMasterKeyPass);
 
     if (match || isMasterOwner || tokenCheck.valid || (isMasterAdminPass && (u || p))) {
@@ -506,7 +594,6 @@
       var loggedUser = { username: loggedUsername, role: loggedRole };
       currentAdminUser = loggedUser;
       
-      // Auto register this staff in local storage if not already there
       if (!staffList.some(function(s){ return s.username.toLowerCase() === loggedUsername.toLowerCase(); })) {
         staffList.push({
           username: loggedUsername,
@@ -517,6 +604,7 @@
           createdAt: new Date().toISOString()
         });
         setLocalList(STORAGE_KEYS.STAFF, staffList);
+        pushCloudVault();
       }
 
       logAction('Admin login successful: ' + loggedUser.username + ' (' + loggedUser.role + ')', loggedUser.username);
@@ -559,7 +647,23 @@
     if (!tbody) return;
     var keys = getLocalList(STORAGE_KEYS.KEYS, []);
     var countSpan = document.getElementById('keysCountBadge');
-    if (countSpan) countSpan.textContent = keys.length + ' Keys';
+    if (countSpan) {
+      countSpan.innerHTML = '<span style="font-weight:700;color:#fff;">' + keys.length + ' Keys</span> ' +
+        '<button id="tfSyncCloudBtn" class="admin-abtn gr" style="padding:2px 7px;font-size:10px;margin-right:6px;" title="تحديث وتزامن المفاتيح مع السيرفر السحابي">🔄 تحديث المزامنة</button>';
+      var syncBtn = document.getElementById('tfSyncCloudBtn');
+      if (syncBtn) {
+        syncBtn.onclick = function(e) {
+          e.preventDefault();
+          syncBtn.textContent = '⏳ جاري التحديث...';
+          fetchCloudVault(function(err) {
+            syncBtn.textContent = '✓ تم التحديث';
+            renderKeys();
+            showToast('تمت مزامنة المفاتيح والأجهزة بنجاح');
+            setTimeout(function(){ syncBtn.textContent = '🔄 تحديث المزامنة'; }, 1500);
+          });
+        };
+      }
+    }
 
     if (keys.length === 0) {
       tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px;">No keys generated yet.</td></tr>';
@@ -583,10 +687,10 @@
 
       var devBadge = '<span style="color:var(--muted-2);font-size:11px;">⚪ غير مربوط بعد</span>';
       if (k.boundDevice) {
-        if (k.boundDevice === CURRENT_DEV_ID) {
-          devBadge = '<span class="tf-badge mod" title="جهازك الحالي">🟢 جهازك الحالي</span>';
+        if (k.boundDevice.toUpperCase() === CURRENT_DEV_ID.toUpperCase()) {
+          devBadge = '<span class="tf-badge mod" title="مربوط بجهازك الحالي">🟢 جهازك (' + k.boundDevice + ')</span>';
         } else {
-          devBadge = '<span class="tf-badge support" title="مربوط بجهاز">🔒 ' + k.boundDevice + '</span>';
+          devBadge = '<span class="tf-badge support" title="مربوط بجهاز العميل">🔒 ' + k.boundDevice + '</span>';
         }
       }
 
@@ -603,7 +707,7 @@
         '<td>' + statusBadge + '</td>' +
         '<td style="text-align:right;">' +
           '<div style="display:inline-flex;gap:4px;">' +
-            (k.boundDevice ? '<button class="admin-abtn" style="padding:4px 7px;font-size:10px;color:var(--yellow);" title="فك ربط الجهاز" data-unbind-idx="' + idx + '">🔄 فك الربط</button>' : '') +
+            (k.boundDevice ? '<button class="admin-abtn" style="padding:4px 7px;font-size:10px;color:var(--yellow);border-color:rgba(255,214,10,0.4);" title="فك ربط الجهاز والسماح بتفعيله على كمبيوتر آخر" data-unbind-idx="' + idx + '">🔄 فك الربط</button>' : '') +
             (effectiveStatus === 'active' 
               ? '<button class="admin-abtn pk" style="padding:4px 7px;font-size:11px;" data-revoke-idx="' + idx + '">Revoke</button>'
               : '<button class="admin-abtn gr" style="padding:4px 7px;font-size:11px;" data-activate-idx="' + idx + '">Activate</button>') +
@@ -707,8 +811,11 @@
     tbody.innerHTML = html;
   }
 
-  // 11. EVENT LISTENERS & URL AUTO-INVITE
+  // 12. EVENT LISTENERS & DOM DELEGATION
   document.addEventListener('DOMContentLoaded', function() {
+    // Initial Background Cloud Sync
+    fetchCloudVault();
+
     // Check URL Invite Parameter: ?staff=TF-STAFF-...
     try {
       var urlParams = new URLSearchParams(window.location.search);
@@ -727,6 +834,7 @@
               createdAt: new Date().toISOString()
             });
             setLocalList(STORAGE_KEYS.STAFF, staffList);
+            pushCloudVault();
           }
           openAdmin();
           showToast('تم تفعيل صلاحيات الإدارة بنجاح: ' + verify.user.username + ' (' + verify.user.role + ')');
@@ -752,6 +860,9 @@
         return false;
       }
 
+      if (verifyKeyBtn) verifyKeyBtn.textContent = '⏳ Checking...';
+
+      // First check local/algorithmic
       var check = checkKeyStatus(inputVal);
       if (check.valid) {
         if (keyError) { keyError.hidden = true; keyError.style.display = 'none'; }
@@ -762,16 +873,31 @@
         }
         setTimeout(function() { unlockWorkspace(inputVal); }, 250);
       } else {
-        if (keyError) {
-          keyError.textContent = check.reason || 'مفتاح التفعيل غير صحيح';
-          keyError.hidden = false;
-          keyError.style.display = 'block';
-          keyError.style.color = '#FF453A';
-        }
-        if (accessKeyInput) {
-          accessKeyInput.style.borderColor = '#FF453A';
-          setTimeout(function() { accessKeyInput.style.borderColor = ''; }, 2000);
-        }
+        // Double check with live cloud
+        fetchCloudVault(function(err) {
+          var retryCheck = checkKeyStatus(inputVal);
+          if (retryCheck.valid) {
+            if (keyError) { keyError.hidden = true; keyError.style.display = 'none'; }
+            if (verifyKeyBtn) {
+              verifyKeyBtn.textContent = '✓ Access Granted';
+              verifyKeyBtn.style.background = 'linear-gradient(180deg, #30D158, #28a745)';
+              verifyKeyBtn.style.boxShadow = '0 8px 22px rgba(48,209,88,0.4)';
+            }
+            setTimeout(function() { unlockWorkspace(inputVal); }, 250);
+          } else {
+            if (verifyKeyBtn) verifyKeyBtn.textContent = 'Unlock';
+            if (keyError) {
+              keyError.textContent = retryCheck.reason || check.reason || 'مفتاح التفعيل غير صحيح';
+              keyError.hidden = false;
+              keyError.style.display = 'block';
+              keyError.style.color = '#FF453A';
+            }
+            if (accessKeyInput) {
+              accessKeyInput.style.borderColor = '#FF453A';
+              setTimeout(function() { accessKeyInput.style.borderColor = ''; }, 2000);
+            }
+          }
+        });
       }
       return false;
     }
@@ -896,6 +1022,7 @@
 
         staff.push(newStaff);
         setLocalList(STORAGE_KEYS.STAFF, staff);
+        pushCloudVault();
 
         logAction('Hired new staff member: ' + u + ' (' + r + ')', currentAdminUser ? currentAdminUser.username : 'salom');
         renderStaff();
@@ -940,7 +1067,7 @@
       }, true);
     }
 
-    // Dynamic Delegation for Table Actions
+    // Table Actions Delegation
     document.addEventListener('click', function(e) {
       var target = e.target;
       if (!target) return;
@@ -979,10 +1106,12 @@
         var idx1 = parseInt(unbindIdx);
         if (keys1[idx1]) {
           keys1[idx1].boundDevice = null;
+          keys1[idx1].boundAt = null;
           setLocalList(STORAGE_KEYS.KEYS, keys1);
+          pushCloudVault(function(){ renderKeys(); });
           logAction('Unbound device for key ' + keys1[idx1].key, currentAdminUser ? currentAdminUser.username : 'salom');
           renderKeys();
-          showToast('Device Unbound! Key can now be activated on another device');
+          showToast('تم فك ربط الجهاز! يمكن الآن تفعيل المفتاح على جهاز آخر');
         }
         return;
       }
@@ -998,6 +1127,7 @@
           if (!revoked.includes(keys2[idx2].key)) revoked.push(keys2[idx2].key);
           setLocalList(STORAGE_KEYS.REVOKED, revoked);
           setLocalList(STORAGE_KEYS.KEYS, keys2);
+          pushCloudVault(function(){ renderKeys(); });
           logAction('Revoked key ' + keys2[idx2].key, currentAdminUser ? currentAdminUser.username : 'salom');
           renderKeys();
           showToast('Key Revoked: ' + keys2[idx2].key, true);
@@ -1013,6 +1143,7 @@
         if (keys3[idx3]) {
           keys3[idx3].status = 'active';
           setLocalList(STORAGE_KEYS.KEYS, keys3);
+          pushCloudVault(function(){ renderKeys(); });
           logAction('Re-activated key ' + keys3[idx3].key, currentAdminUser ? currentAdminUser.username : 'salom');
           renderKeys();
           showToast('Key Activated: ' + keys3[idx3].key);
@@ -1028,6 +1159,7 @@
         if (keys4[idx4]) {
           var rem = keys4.splice(idx4, 1)[0];
           setLocalList(STORAGE_KEYS.KEYS, keys4);
+          pushCloudVault(function(){ renderKeys(); });
           logAction('Deleted key ' + rem.key, currentAdminUser ? currentAdminUser.username : 'salom');
           renderKeys();
           showToast('Key Deleted');
@@ -1043,6 +1175,7 @@
         if (staff5[idx5]) {
           var remS = staff5.splice(idx5, 1)[0];
           setLocalList(STORAGE_KEYS.STAFF, staff5);
+          pushCloudVault(function(){ renderStaff(); });
           logAction('Removed staff member: ' + remS.username, currentAdminUser ? currentAdminUser.username : 'salom');
           renderStaff();
           showToast('Removed staff: ' + remS.username);
@@ -1084,6 +1217,7 @@
   // Global Manager Object
   window.TF_KEY_MANAGER = {
     getHwid: function() { return CURRENT_DEV_ID; },
+    syncCloud: fetchCloudVault,
     createStaffToken: createStaffToken,
     verifyStaffToken: verifyStaffToken,
     generateKey: function(pfx, dur, note) { return generateAlgorithmicKey(pfx, dur, note); },
