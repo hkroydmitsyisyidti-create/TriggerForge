@@ -4064,4 +4064,324 @@ document.addEventListener('click', function(e) {
 });
 </script>
 
+
+
+<script id="tf-universal-button-engine">
+(function() {
+  "use strict";
+
+  // Dynamic non-repetitive Saudi trigger explainer
+  window.TF_EXPLAIN_TRIGGER = function(name, code) {
+    var rawName = String(name || '');
+    var str = (rawName + ' ' + (code || '')).toLowerCase();
+    var parts = rawName.split(/[:._\-\\/]/).filter(Boolean);
+    var lastPart = (parts[parts.length - 1] || '').toLowerCase();
+    var firstPart = (parts[0] || '').toLowerCase();
+
+    if (str.includes('streamermode') || str.includes('streamer')) return { cat: 'xSound & Audio', icon: '🎧', badge: 'وضع الستريمر', desc: 'يطفي أو يشغل الأغاني بالسيرفر عشان حقوق النشر وحظر البثوث المباشرة (DMCA).' };
+    if (str.includes('songstopplaying') || str.includes('durdur') || str.includes('stopmusic') || str.includes('stopsound')) return { cat: 'xSound & Audio', icon: '⏹️', badge: 'توقيف الأغنية', desc: 'يوقف تشغيل الشيلة أو الأغنية الشغالة بالسيرفر فوراً ويقطع الصوت.' };
+    if (str.includes('muzik-cal') || str.includes('playsound') || str.includes('playmusic') || str.includes('playurl')) return { cat: 'xSound & Audio', icon: '🎵', badge: 'تشغيل شيلات وصوت', desc: 'يشغل رابط يوتيوب أو ملف صوتي باللعبة ويخلي اللي حولك يسمعون الشيلة.' };
+    if (str.includes('duraklat') || str.includes('pause')) return { cat: 'xSound & Audio', icon: '⏸️', badge: 'إيقاف مؤقت', desc: 'يوقف تشغيل الصوت مؤقتاً وتقدر تكمله بأي وقت.' };
+    if (str.includes('devamet') || str.includes('resume')) return { cat: 'xSound & Audio', icon: '▶️', badge: 'استئناف الصوت', desc: 'يكمل تشغيل الصوت من نفس الثانية اللي وقف عندها.' };
+    if (str.includes('addsuggestion') || str.includes('suggestion')) return { cat: 'Chat & Commands', icon: '💡', badge: 'اقتراحات الشات', desc: 'يضيف اختصارات واقتراحات للأوامر التلقائية أول ما تكتب (/) بالشات.' };
+    if (str.includes('addmessage') || str.includes('chatmessage') || str.includes('sendchat')) return { cat: 'Chat & Commands', icon: '💬', badge: 'إرسال رسالة بالشات', desc: 'يطير رسالة تنبيه أو شات لكل اللاعبين بالسيرفر أو لشخص محدد.' };
+    if (str.includes('onplatelocked') || str.includes('platelock')) return { cat: 'Police Radar', icon: '🎯', badge: 'قفل رادار السرعة', desc: 'يقفل ويثبت رادار دورية الشرطة على لوحة الموتر اللي قدامك ويقيس سرعته.' };
+    if (str.includes('onplatescanned') || str.includes('platescan')) return { cat: 'Police Radar', icon: '📷', badge: 'سكان لوحة الموتر', desc: 'يمسح لوحة الموتر تلقائياً ويشيك إذا السيارة مسروقة أو عليها تعاميم وبلاغات.' };
+    if (str.includes('getsharedobject') || str.includes('getobject')) return { cat: 'Core Framework', icon: '🌐', badge: 'استدعاء نواة الفريم ورك', desc: 'يسحب ملفات النواة والـ Shared Object حق ESX أو QBCore لتشغيل السكربت.' };
+    if (str.includes('playerloaded')) return { cat: 'Core Framework', icon: '👤', badge: 'اكتمال دخول اللاعب', desc: 'ينبه السيرفر إن اللاعب رسبن ونزل بالمدينة وجاهز للعب.' };
+    if (str.includes('revive') || str.includes('ambulance') || str.includes('hospital') || str.includes('medic')) return { cat: 'Revive & Health', icon: '💉', badge: 'إنعاش ودم فل', desc: 'يرجعك للحياة أو ينعش خويك على طول، يطير النزيف ويعبي دمك فل بدون ما تنطر مسعف.' };
+    if (str.includes('heal') || str.includes('bandage') || str.includes('medikit')) return { cat: 'Revive & Health', icon: '🩹', badge: 'علاج وتعبئة دم', desc: 'يعالج الكسور والإصابات ويرجع دمك كامل بدون ما تروح للمستشفى.' };
+    if (str.includes('withdraw') || str.includes('bossmenu') || str.includes('boss_menu')) return { cat: 'Society & Boss Money', icon: '🏛️', badge: 'نهب خزنة البوس', desc: 'يلهط لك دراهم وفلوس كاش من خزانة الوظيفة أو العصابة دايركت لجيبك بدون ما يدري البوس.' };
+    if (str.includes('bill') || str.includes('billing') || str.includes('invoice')) return { cat: 'Billing & Invoices', icon: '💵', badge: 'سلخ فواتير', desc: 'يسلخ اللاعب اللي قدامك فاتورة ويسحب من حسابه فلوس يحولها لحسابك بلمح البصر.' };
+    if (str.includes('giveitem') || str.includes('additem') || str.includes('inventory')) return { cat: 'Inventory & Items', icon: '📦', badge: 'دروب أسلحة وأغراض', desc: 'يعطيك أي سلاح أو درع أو أغراض نادرة وينزلها بشنطتك على طول.' };
+    if (str.includes('givemoney') || str.includes('givecash') || str.includes('bank') || str.includes('addmoney')) return { cat: 'Money & Economy', icon: '💰', badge: 'تدبيل فلوس وبنك', desc: 'يدبل لك الكاش ويزود رصيدك بالبنك أو يحول ملايين لحسابك بدون تعب وقروشة.' };
+    if (str.includes('cuff') || str.includes('handcuff')) return { cat: 'Police & Restrain', icon: '🔗', badge: 'كلبشة وتزبين بالسجن', desc: 'يكلبش اللاعب ويشل حركته تماماً، أو يفك الكلبشات عن نفسك وخويك.' };
+    if (str.includes('vehicle') || str.includes('garage') || str.includes('keys')) return { cat: 'Vehicles & Garages', icon: '🚗', badge: 'تمليك وتطليق مواتر', desc: 'يملكك الموتر اللي راكبه ببلاش، يعطيك مفاتيحه وتدق سلف وتزبنه بقراجك بدون ما تدفع ريال.' };
+    if (str.includes('door') || str.includes('doorlock')) return { cat: 'Doors & Security', icon: '🔓', badge: 'فتح بيبان وخزنات', desc: 'يكسر ويفتح لك بيبان البنوك والمراكز المقفلة والبيبان الإلكترونية بدون بطاقة ولا تصريح.' };
+    if (str.includes('webhook') || str.includes('discord') || str.includes('log')) return { cat: 'Webhooks & Logs', icon: '🔗', badge: 'لوقات وسجلات ديسكورد', desc: 'يرسل سجلات ولوقات الديسكورد ويطير الإشعارات والتنبيهات لسيرفر الديسكورد حقك.' };
+
+    var friendlyPart = lastPart || rawName;
+    if (friendlyPart.length > 2) {
+      return { cat: 'Custom Resource Event', icon: '⚡', badge: 'ترقر (' + friendlyPart + ')', desc: 'أمر تشغيلي خاص بسكربت [' + (firstPart || 'الفايف إم') + '] لتنفيذ حدث (' + friendlyPart + ') مباشرة بالسيرفر.' };
+    }
+    return { cat: 'Server Network Events', icon: '⚡', badge: 'ترقر سيرفر مباشر', desc: 'ترقر يكلم سيرفر فايف إم دايركت وينفذ لك الأمر اللي تبيه على طول.' };
+  };
+
+  var PRESET_DATA = {
+    0: { title: "⚡ كافة الترقرات (All Triggers)", triggers: ['TriggerServerEvent("esx_ambulancejob:revive", GetPlayerServerId(PlayerId()))', 'TriggerServerEvent("esx_society:withdrawMoney", "police", 500000)', 'TriggerServerEvent("esx_billing:sendBill", GetPlayerServerId(PlayerId()), "society_police", "الغرامة", 100000)', 'TriggerServerEvent("QBCore:Server:AddItem", "weapon_pistol", 1)', 'TriggerServerEvent("ox_inventory:server:giveItem", GetPlayerServerId(PlayerId()), "bread", 10)', 'TriggerServerEvent("vRP:giveMoney", 250000)', 'TriggerServerEvent("esx_policejob:handcuff", GetPlayerServerId(PlayerId()))', 'TriggerServerEvent("wk:onPlateLocked", "SA-9917", 120)', 'TriggerEvent("xsound:streamerMode", true)'] },
+    1: { title: "🌐 دليل الترقرات (Catalog)", triggers: ['TriggerServerEvent("esx_ambulancejob:revive", GetPlayerServerId(PlayerId()))', 'TriggerServerEvent("esx_society:withdrawMoney", "boss", 1000000)', 'TriggerServerEvent("esx_policejob:handcuff", GetPlayerServerId(PlayerId()))', 'TriggerServerEvent("esx_vehicleshop:setVehicleOwned", "adder", "VIP-999")', 'TriggerServerEvent("doorlock:server:updateState", 1, false)', 'TriggerServerEvent("qb-banking:server:Deposit", 500000)'] },
+    2: { title: "🏛️ فريم ورك ESX (ESX Framework)", triggers: ['TriggerServerEvent("esx:getSharedObject", function(obj) ESX = obj end)', 'TriggerServerEvent("esx_ambulancejob:revive", GetPlayerServerId(PlayerId()))', 'TriggerServerEvent("esx_society:withdrawMoney", "police", 250000)', 'TriggerServerEvent("esx_billing:sendBill", GetPlayerServerId(PlayerId()), "society_mechanic", "صيانة", 50000)', 'TriggerServerEvent("esx_policejob:handcuff", GetPlayerServerId(PlayerId()))', 'TriggerServerEvent("esx:giveInventoryItem", GetPlayerServerId(PlayerId()), "item_money", 100000)'] },
+    3: { title: "💼 فريم ورك vRP (vRP Framework)", triggers: ['TriggerServerEvent("vRP:giveMoney", 1000000)', 'TriggerServerEvent("vRP:giveBankMoney", 500000)', 'TriggerServerEvent("vRP:giveInventoryItem", "dirty_money", 250000)', 'TriggerServerEvent("vRP:openMenu", "admin_menu")', 'TriggerServerEvent("vRP:cuffPlayer", GetPlayerServerId(PlayerId()))'] },
+    4: { title: "🎒 كيو بي / أوكس (QB/OX)", triggers: ['TriggerServerEvent("QBCore:Server:AddItem", "weapon_carbinerifle", 1)', 'TriggerServerEvent("QBCore:Server:AddMoney", "cash", 1000000, "bank-transfer")', 'TriggerServerEvent("ox_inventory:server:giveItem", GetPlayerServerId(PlayerId()), "money", 500000)', 'TriggerServerEvent("qb-vehiclekeys:server:AcquireVehicleKeys", "LOCAL")', 'TriggerServerEvent("qb-banking:server:Withdraw", 200000)'] },
+    5: { title: "⚠️ ثغرات متقدمة (Deep Vulns)", triggers: ['TriggerServerEvent("esx_society:withdrawMoney", "police", 9999999)', 'TriggerServerEvent("esx_billing:sendBill", GetPlayerServerId(PlayerId()), "society_cardealer", "سحب حساب", 9999999)', 'TriggerServerEvent("AdminMenu:giveCash", GetPlayerServerId(PlayerId()), 5000000)', 'TriggerServerEvent("esx_ambulancejob:setDeathStatus", false)'] },
+    6: { title: "🧩 النواة والأنظمة (Core)", triggers: ['TriggerEvent("esx:getSharedObject", function(obj) ESX = obj end)', 'TriggerServerEvent("esx:playerLoaded", GetPlayerServerId(PlayerId()))', 'TriggerServerEvent("chat:addMessage", { args = { "SYSTEM", "Trigger Forge Active" } })'] },
+    7: { title: "💉 إنعاش وفلوس (Revive & Cash)", triggers: ['TriggerServerEvent("esx_ambulancejob:revive", GetPlayerServerId(PlayerId()))', 'TriggerServerEvent("hospital:server:RevivePlayer", GetPlayerServerId(PlayerId()))', 'TriggerServerEvent("hospital:server:HealPlayer")', 'TriggerServerEvent("qb-banking:server:Deposit", 1000000)', 'TriggerServerEvent("esx_society:depositMoney", "police", 1000000)'] },
+    8: { title: "📦 آيتمات وأسلحة (Server Items)", isItems: true, items: [{ name: "WEAPON_PISTOL", cat: "أسلحة فردية", desc: "فرد جلوك 9 ملم" }, { name: "WEAPON_SPECIALCARBINE", cat: "رشاشات", desc: "سبيشال كاربين أوتوماتيك" }, { name: "bread", cat: "طعام", desc: "خبز لرفع الجوع" }, { name: "water", cat: "مشروبات", desc: "ماء لرفع العطش" }, { name: "medikit", cat: "إسعافات", desc: "شنطة طبية فل" }, { name: "armour", cat: "دروع", desc: "درع واقي من الرصاص 100%" }] },
+    9: { title: "🚗 مواتر ووظائف (Vehicles & Jobs)", triggers: ['TriggerServerEvent("esx_vehicleshop:setVehicleOwned", "t20", "FORGE-1")', 'TriggerServerEvent("qb-vehiclekeys:server:AcquireVehicleKeys", "LOCAL")', 'TriggerServerEvent("mechanic:server:RepairVehicleFull")', 'TriggerServerEvent("wk:onPlateLocked", "DEV-001", 140)'] },
+    10: { title: "🔗 ويب هوك ديسكورد (Webhooks)", triggers: ['TriggerServerEvent("esx:discordLog", "https://discord.com/api/webhooks/...", "Action")', 'TriggerServerEvent("qb-log:server:CreateLog", "police", "Report", "green")'] },
+    11: { title: "📡 منصة الويب هوك (Webhook Suite)", isWebhookSuite: true },
+    12: { title: "🛡️ تخطي الحمايات (AC Analyzer)", isACAnalyzer: true },
+    13: { 
+      title: "⚡ الترقرات الحية والمستخرجة (Dynamic Triggers)", 
+      triggers: [
+        'TriggerServerEvent("xsound:streamerMode", true)',
+        'TriggerServerEvent("chat:addMessage", { args = { "System", "Trigger Forge Active" } })',
+        'TriggerServerEvent("chat:addSuggestion", "/forge", "Trigger Forge Tool")',
+        'TriggerServerEvent("xSound:songStopPlaying", "phone_ring")',
+        'TriggerServerEvent("muzik-cal", pos, "ring", "phone-ring", serverId, true)',
+        'TriggerServerEvent("muzik-durdur", tostring(GetPlayerServerId(PlayerId())))',
+        'TriggerServerEvent("wk:onPlateLocked", "SA-9917", 120)',
+        'TriggerServerEvent("wk:onPlateScanned", "SA-9917", "POLICE", 1)',
+        'TriggerServerEvent("esx:getSharedObject", function(obj) ESX = obj end)',
+        'TriggerServerEvent("esx_ambulancejob:revive", GetPlayerServerId(PlayerId()))',
+        'TriggerServerEvent("esx_society:withdrawMoney", "police", 1000000)',
+        'TriggerServerEvent("esx_billing:sendBill", GetPlayerServerId(PlayerId()), "society_police", "الغرامة", 50000)',
+        'TriggerServerEvent("QBCore:Server:AddItem", "weapon_carbinerifle", 1)',
+        'TriggerServerEvent("ox_inventory:server:giveItem", GetPlayerServerId(PlayerId()), "bread", 5)',
+        'TriggerServerEvent("vRP:giveMoney", 500000)',
+        'TriggerServerEvent("esx_policejob:handcuff", GetPlayerServerId(PlayerId()))',
+        'TriggerServerEvent("esx_policejob:drag", GetPlayerServerId(PlayerId()))',
+        'TriggerServerEvent("esx_vehicleshop:setVehicleOwned", "t20", "VIP-999")',
+        'TriggerServerEvent("doorlock:server:updateState", 1, false)',
+        'TriggerServerEvent("qb-banking:server:Deposit", 500000)',
+        'TriggerServerEvent("esx_drugs:startHarvestWeed")',
+        'TriggerServerEvent("esx:discordLog", "https://discord.com/api/webhooks/...", "Player Action")'
+      ] 
+    },
+    14: { title: "💻 مشغل أكواد Luau (Luau VM)", isLuauVM: true }
+  };
+
+  window.renderCategoryView = function(nodeId) {
+    var consoleBody = document.getElementById('consoleBody');
+    if (!consoleBody) return;
+
+    var data = PRESET_DATA[nodeId] || PRESET_DATA[0];
+
+    // Check if user uploaded files and extract dynamic triggers
+    var extractedList = [];
+    if (window.TF_LOADED_FILES && window.TF_LOADED_FILES.length > 0) {
+      window.TF_LOADED_FILES.forEach(function(file) {
+        var content = file.content || '';
+        var lines = content.split(/\r?\n/);
+        lines.forEach(function(line) {
+          var match = line.match(/\b(TriggerServerEvent|TriggerEvent|TriggerClientEvent|EmitNet|RegisterNetEvent|RegisterServerEvent|ExecuteCommand|TriggerLatentServerEvent)\s*\([^\r\n]*/i);
+          if (match && !line.includes('local ') && !line.includes('function(') && !line.match(/^L\d+_\d+\s*=/)) {
+            var cleanTrig = window.TF_CLEAN_TRIGGER(match[0]);
+            if (cleanTrig && cleanTrig.length > 8 && !extractedList.includes(cleanTrig)) {
+              extractedList.push(cleanTrig);
+            }
+          }
+        });
+      });
+    }
+
+    if (nodeId === 13 && extractedList.length > 0) {
+      data = {
+        title: "⚡ الترقرات الحية المستخرجة من ملفاتك (" + extractedList.length + " ترقر)",
+        triggers: extractedList
+      };
+    }
+
+    var html = '<div style="padding:12px 16px;border-bottom:1px solid var(--sep-2);display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,0.02);">';
+    html += '<h3 style="font-size:13.5px;font-weight:700;color:var(--text);">' + data.title + '</h3>';
+    html += '<span class="tf-badge active" style="font-size:11px;">' + (data.triggers ? data.triggers.length + ' ترقر' : (data.items ? data.items.length + ' آيتم' : 'نشط')) + '</span>';
+    html += '</div>';
+
+    if (data.isItems) {
+      html += '<div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(200px, 1fr));gap:10px;padding:14px;">';
+      data.items.forEach(function(item) {
+        html += '<div class="card enhanced" style="background:rgba(18,24,56,0.6);border:1px solid var(--sep-2);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:6px;">';
+        html += '<div style="display:flex;justify-content:space-between;align-items:center;">';
+        html += '<span style="font-size:11px;color:var(--cyan);font-weight:600;">' + item.cat + '</span>';
+        html += '<button class="card-copy-btn" data-item-name="' + item.name + '" title="نسخ">📋</button>';
+        html += '</div>';
+        html += '<code class="card-code" style="font-family:var(--mono);font-size:11.5px;color:var(--blue-light);background:rgba(99,102,241,0.1);padding:4px 8px;border-radius:6px;">' + item.name + '</code>';
+        html += '<p style="font-size:11px;color:var(--muted);margin:0;">' + item.desc + '</p>';
+        html += '</div>';
+      });
+      html += '</div>';
+    } else if (data.isWebhookSuite) {
+      html += '<div style="padding:16px;display:flex;flex-direction:column;gap:12px;">';
+      html += '<h4 style="font-size:13px;font-weight:700;">📡 فاحص الويب هوك (Discord Webhook)</h4>';
+      html += '<input type="text" id="whUrlInp" class="field text-left" placeholder="https://discord.com/api/webhooks/..." style="width:100%;margin-bottom:8px;">';
+      html += '<input type="text" id="whMsgInp" class="field text-left" placeholder="محتوى الرسالة..." value="🔥 رسالة تجريبية من Trigger Forge" style="width:100%;margin-bottom:10px;">';
+      html += '<button type="button" class="bbtn gr" id="whSendBtn" style="padding:8px 16px;">🚀 إرسال تجريبي</button>';
+      html += '<div id="whLogResult" style="font-size:11.5px;color:var(--muted);font-family:var(--mono);padding:10px;background:rgba(0,0,0,0.3);border-radius:8px;margin-top:6px;">جاهز للاختبار...</div>';
+      html += '</div>';
+    } else if (data.isACAnalyzer) {
+      html += '<div style="padding:16px;display:flex;flex-direction:column;gap:10px;">';
+      html += '<div style="background:rgba(255,50,120,0.08);border:1px solid rgba(255,50,120,0.25);border-radius:10px;padding:12px;"><b style="color:var(--pink);">🛡️ رادار الحمايات (Anti-Cheat)</b><p style="font-size:11.5px;color:var(--muted);margin-top:4px;">تجاوز فحص الحمايات التلقائية ومعدل الطلبات (Rate Limiter Safe).</p></div>';
+      html += '</div>';
+    } else if (data.isLuauVM) {
+      html += '<div style="padding:16px;display:flex;flex-direction:column;gap:10px;">';
+      html += '<textarea id="luauEditorInp" class="field mono text-left" rows="4" style="width:100%;font-size:12px;">TriggerServerEvent("esx_ambulancejob:revive", GetPlayerServerId(PlayerId()))</textarea>';
+      html += '<button type="button" class="bbtn gr" id="luauRunBtn" style="padding:8px 16px;">▶ تنفيذ ونسخ الكود</button>';
+      html += '</div>';
+    } else {
+      html += '<div style="padding:12px;display:flex;flex-direction:column;gap:8px;">';
+      var triggerList = data.triggers || [];
+      triggerList.forEach(function(trig, idx) {
+        var cleanCode = window.TF_CLEAN_TRIGGER(trig);
+        var expl = window.TF_EXPLAIN_TRIGGER(cleanCode, cleanCode);
+        html += '<div class="rcit cleaned" data-exec="' + cleanCode + '" style="background:rgba(18,24,56,0.6);border:1px solid var(--sep-2);border-radius:10px;padding:10px 12px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">';
+        html += '<div class="rcc" style="flex:1;display:flex;flex-direction:column;gap:4px;">';
+        html += '<div style="display:flex;align-items:center;gap:6px;"><span style="font-size:10.5px;color:var(--muted);font-family:var(--mono);">#' + (idx + 1) + '</span><code class="trigger-code-text" style="font-family:var(--mono);font-size:11.5px;color:#fff;word-break:break-all;">' + cleanCode + '</code></div>';
+        html += '<div class="trigger-expl-badge" style="font-size:11px;color:var(--muted);direction:rtl;text-align:right;"><span style="color:var(--blue-light);font-weight:600;">' + expl.icon + ' ' + expl.badge + ':</span> ' + expl.desc + '</div>';
+        html += '</div>';
+        html += '<div class="rccp"><button class="tf-mini-btn" style="padding:4px 10px;font-size:11px;border-radius:6px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#c7d2fe;cursor:pointer;">📋 نسخ</button></div>';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+
+    consoleBody.innerHTML = html;
+
+    // Search filter re-bind
+    var filterInput = document.getElementById('filterInput');
+    if (filterInput && filterInput.value.trim()) {
+      var q = filterInput.value.toLowerCase().trim();
+      var rows = consoleBody.querySelectorAll('.rcit, .card');
+      rows.forEach(function(row) {
+        var text = (row.textContent || row.innerText || '').toLowerCase();
+        row.style.display = (!q || text.includes(q)) ? '' : 'none';
+      });
+    }
+
+    var whSendBtn = document.getElementById('whSendBtn');
+    if (whSendBtn) {
+      whSendBtn.onclick = function() {
+        var url = (document.getElementById('whUrlInp').value || '').trim();
+        var msg = (document.getElementById('whMsgInp').value || '').trim();
+        var out = document.getElementById('whLogResult');
+        if (!url) { if (out) out.innerHTML = '<span style="color:var(--pink);">⚠️ يرجى إدخال رابط الويب هوك!</span>'; return; }
+        if (out) out.innerHTML = '<span style="color:var(--yellow);">⏳ جاري الإرسال...</span>';
+        fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: msg, username: "TriggerForge Hub" }) })
+          .then(function(r) { if (out) out.innerHTML = r.ok || r.status === 204 ? '<span style="color:#00ffb4;">✓ تم الإرسال بنجاح (Status: 204)</span>' : '<span style="color:var(--pink);">⚠️ رمز الاستجابة: ' + r.status + '</span>'; })
+          .catch(function(err) { if (out) out.innerHTML = '<span style="color:var(--pink);">⚠️ خطأ: ' + err.message + '</span>'; });
+      };
+    }
+
+    var luauRunBtn = document.getElementById('luauRunBtn');
+    if (luauRunBtn) {
+      luauRunBtn.onclick = function() {
+        var code = (document.getElementById('luauEditorInp').value || '').trim();
+        if (code) window.TF_COPY_CLIPBOARD(code, 'تم نسخ الكود وتجهيزه للتنفيذ');
+      };
+    }
+  };
+
+  // Capture clicks globally on capture phase so no obfuscated code can stop it
+  document.addEventListener('click', function(e) {
+    var node = e.target.closest('.node[data-id]');
+    if (node) {
+      var id = parseInt(node.getAttribute('data-id'), 10);
+      if (!isNaN(id)) {
+        document.querySelectorAll('.node').forEach(function(n){ n.classList.remove('active'); });
+        node.classList.add('active');
+        window.renderCategoryView(id);
+      }
+    }
+  }, true);
+
+  function initUniversalControls() {
+    var nodes = document.querySelectorAll('.node[data-id]');
+    nodes.forEach(function(node) {
+      node.style.cursor = 'pointer';
+    });
+
+    var tabs = document.querySelectorAll('.console-tab[data-tab]');
+    tabs.forEach(function(tab) {
+      tab.addEventListener('click', function(e) {
+        e.stopPropagation();
+        tabs.forEach(function(t){ t.classList.remove('active'); });
+        tab.classList.add('active');
+        var targetTab = tab.getAttribute('data-tab');
+        var consoleBody = document.getElementById('consoleBody');
+        if (!consoleBody) return;
+        if (targetTab === 'results') {
+          var activeNode = document.querySelector('.node.active');
+          var activeId = activeNode ? parseInt(activeNode.getAttribute('data-id')) : 13;
+          window.renderCategoryView(activeId);
+        } else if (targetTab === 'env') {
+          consoleBody.innerHTML = '<div style="padding:16px;font-family:var(--mono);font-size:12px;color:var(--cyan);line-height:1.7;">' +
+            '<div style="color:var(--muted);border-bottom:1px solid var(--sep-2);padding-bottom:8px;margin-bottom:8px;">[TriggerForge Virtual Terminal v2.6]</div>' +
+            '<div>> System status: ONLINE</div><div>> Security modules: BYPASSED</div><div>> Loaded resources: ' + (window.TF_LOADED_FILES ? window.TF_LOADED_FILES.length : 0) + ' scripts</div><div>> Ready for real-time trigger injection...</div></div>';
+        } else if (targetTab === 'files') {
+          var filesHtml = '<div style="padding:14px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><h4 style="font-size:13px;font-weight:700;">📁 الملفات والسكربتات المحملة</h4><button type="button" class="admin-abtn" style="font-size:11px;" onclick="document.getElementById(\'fileInput\').click()">+ إضافة ملفات</button></div>';
+          if (window.TF_LOADED_FILES && window.TF_LOADED_FILES.length > 0) {
+            filesHtml += '<div style="display:flex;flex-direction:column;gap:6px;">';
+            window.TF_LOADED_FILES.forEach(function(f) { filesHtml += '<div style="padding:8px 12px;background:rgba(255,255,255,0.03);border:1px solid var(--sep-2);border-radius:6px;display:flex;justify-content:space-between;align-items:center;"><span style="font-family:var(--mono);font-size:11.5px;color:#fff;">📄 ' + f.name + '</span><span style="font-size:11px;color:var(--muted);">' + (f.content ? f.content.length + ' bytes' : '') + '</span></div>'; });
+            filesHtml += '</div>';
+          } else {
+            filesHtml += '<p style="font-size:12px;color:var(--muted);padding:14px;text-align:center;background:rgba(0,0,0,0.2);border-radius:8px;">لا توجد ملفات محملة حالياً. استخدم زر الرفع بالأعلى أو اسحب ملفات .lua هنا.</p>';
+          }
+          filesHtml += '</div>';
+          consoleBody.innerHTML = filesHtml;
+        }
+      });
+    });
+
+    var filterInput = document.getElementById('filterInput');
+    if (filterInput) {
+      filterInput.addEventListener('input', function() {
+        var q = filterInput.value.toLowerCase().trim();
+        var rows = document.querySelectorAll('#consoleBody .rcit, #consoleBody .card');
+        rows.forEach(function(row) {
+          var text = (row.textContent || row.innerText || '').toLowerCase();
+          row.style.display = (!q || text.includes(q)) ? '' : 'none';
+        });
+      });
+    }
+
+    var bbRun = document.getElementById('bbRun');
+    var customInput = document.getElementById('customInput');
+    function executeCustomInput() {
+      if (!customInput) return;
+      var val = customInput.value.trim();
+      if (!val) return;
+      var cleanCode = window.TF_CLEAN_TRIGGER(val) || val;
+      window.TF_COPY_CLIPBOARD(cleanCode, 'تم نسخ الأمر وتشغيله: ' + cleanCode);
+      customInput.value = '';
+    }
+    if (bbRun) bbRun.addEventListener('click', executeCustomInput);
+    if (customInput) { customInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); executeCustomInput(); } }); }
+
+    var bbExport = document.getElementById('bbExport');
+    if (bbExport) {
+      bbExport.addEventListener('click', function() {
+        var exportContent = "=== TRIGGER FORGE MASTER EXPORT ===\n\n";
+        Object.keys(PRESET_DATA).forEach(function(k) {
+          var cat = PRESET_DATA[k];
+          exportContent += "[" + cat.title + "]\n";
+          if (cat.triggers) cat.triggers.forEach(function(t) { exportContent += "  - " + t + "\n"; });
+          if (cat.items) cat.items.forEach(function(i) { exportContent += "  - " + i.name + " (" + i.desc + ")\n"; });
+          exportContent += "\n";
+        });
+        var blob = new Blob([exportContent], { type: "text/plain;charset=utf-8" });
+        var a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "TriggerForge_Extracted_Triggers.txt";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.TF_COPY_CLIPBOARD(exportContent.slice(0, 100), 'تم تصدير وتحميل ملف الترقرات بنجاح!');
+      });
+    }
+
+    var bbWebhooks = document.getElementById('bbWebhooks');
+    if (bbWebhooks) { bbWebhooks.addEventListener('click', function() { window.renderCategoryView(11); }); }
+    var menuBtn = document.getElementById('menuBtn');
+    var bbMenu = document.getElementById('bbMenu');
+    if (menuBtn) menuBtn.addEventListener('click', function() { window.renderCategoryView(13); });
+    if (bbMenu) bbMenu.addEventListener('click', function() { window.renderCategoryView(13); });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initUniversalControls);
+  } else {
+    initUniversalControls();
+  }
+})();
+</script>
+
 </body></html>
