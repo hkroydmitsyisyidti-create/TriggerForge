@@ -915,7 +915,18 @@
     if (keyGateForm) keyGateForm.addEventListener('submit', doUnlock, true);
     if (verifyKeyBtn) verifyKeyBtn.addEventListener('click', doUnlock, true);
 
-    var topAdminBtn = document.getElementById('topAdminBtn');
+    
+    window.TF_OPEN_ADMIN = openAdmin;
+    var gateAdminTopBtn = document.getElementById('gateAdminTopBtn');
+    if (gateAdminTopBtn) {
+      gateAdminTopBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        openAdmin();
+      });
+    }
+
+var topAdminBtn = document.getElementById('topAdminBtn');
     if (topAdminBtn) {
       topAdminBtn.removeAttribute('hidden');
       topAdminBtn.style.display = 'inline-flex';
@@ -2958,6 +2969,49 @@ button { cursor: pointer; border: none; outline: none; background: transparent; 
   transform: scale(1.04);
 }
 
+
+
+/* Top Right Mini Admin Button on Gate Screen */
+.gate-top-admin-btn {
+  position: absolute;
+  top: 22px;
+  right: 24px;
+  z-index: 10000;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 15px;
+  background: rgba(11, 17, 42, 0.75);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  border-radius: 10px;
+  color: #c7d2fe;
+  font-family: var(--display);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  transition: all 0.2s var(--spring);
+}
+
+.gate-top-admin-btn:hover {
+  color: #fff;
+  background: rgba(22, 34, 82, 0.92);
+  border-color: rgba(99, 102, 241, 0.65);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(99, 102, 241, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.gate-top-admin-btn svg {
+  color: var(--cyan);
+  transition: transform 0.2s ease;
+}
+
+.gate-top-admin-btn:hover svg {
+  transform: scale(1.15);
+}
+
 </style>
 <style id="stSpinStyle">@keyframes stSpin{to{transform:rotate(360deg)}}</style>
 <style id="tf-admin-custom-styles">
@@ -3544,6 +3598,13 @@ button { cursor: pointer; border: none; outline: none; background: transparent; 
 
 
 <div id="keyGate" class="gate">
+ <button type="button" id="gateAdminTopBtn" class="gate-top-admin-btn" title="لوحة الإدارة (Admin Panel)" onclick="if(window.TF_OPEN_ADMIN){window.TF_OPEN_ADMIN();}else{var ov=document.getElementById('adminOverlay');if(ov){ov.removeAttribute('hidden');ov.style.display='flex';ov.style.opacity='1';}}">
+  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+  </svg>
+  <span>لوحة الإدارة</span>
+ </button>
+
  <div class="gate-card">
   <div class="gate-mark"><svg class="mark" viewBox="0 0 24 24" fill="none"><path d="M12 2.6 19.4 6.85 V15.15 L12 19.4 4.6 15.15 V6.85 Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"></path><path d="M12.7 7.3 8.9 12.4 H11.2 L10.6 16.1 14.7 10.8 H12.1 Z" fill="var(--blue)"></path></svg></div>
   <h2>Trigger Forge</h2>
